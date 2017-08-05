@@ -37,3 +37,5 @@ vertex::vertex(double x, double y) {
     this->x = x;
     this->y = y;
 }
+
+vertex::vertex(int n):number(n){}
