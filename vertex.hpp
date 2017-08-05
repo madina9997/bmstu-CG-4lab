@@ -9,8 +9,10 @@
 class vertex {
 public:
     double x,y;
+    int number;
     static vertex null() { return vertex(-1,-1); };
     vertex(double x, double y);
+    vertex(int number);
     vertex next();
     vertex prev();
     vertex up();
