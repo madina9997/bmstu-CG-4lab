@@ -20,10 +20,10 @@ using namespace std;
 static int WIDTH1 = 800, HEIGHT1 = 800;
 
 bool f = false;
-pixels pixels;
+pixels pixels,buffer;
 vector<vertex> vertexes;
 vector<line> lines;
-int ii=0;
+//int ii=0;
 
 void error(int code, const char *desc) { fputs(desc, stderr); }
 
@@ -36,6 +36,7 @@ void resize(GLFWwindow *window, int w, int h) {
         glLoadIdentity();
 	WIDTH1 = w; HEIGHT1 = h;
 	pixels.make(w,h);
+	buffer.make(w,h);
 	lines.clear();
 	f = false;
 }
@@ -65,6 +66,62 @@ void makelines() {
 	}
 }
 
+void filling(vector<line>& lines){
+	bool extremum=false;
+	for (int i=0;i<lines.size();i++) {
+		if ((lines[(i + 1) % lines.size()].y2 - lines[(i + 1) % lines.size()].y) *
+			(lines[i].y - lines[i].y2) > 0) {
+			extremum = true;
+			//cout<<"extremum on the end of line number   "<<ii<<endl;//cout<<"extremum = "<<extremum<<endl;
+		}
+		else {
+			extremum = false;
+			//cout<<"non extremum on the end of line number   "<<ii<<endl;//cout<<"extremum = "<<extremum<<endl;
+		}
+		pixels.filling(boundary(), lines[i], extremum);
+		for (line l:lines) pixels.putline(l);
+	}
+
+}
+
+void antialiasing() {
+	float value=1.0f/6.0f;
+	glReadBuffer(GL_BACK);
+	glDrawBuffer(GL_BACK);
+
+	glDrawPixels(WIDTH1,HEIGHT1,GL_RGBA,GL_FLOAT,pixels.buffer);
+	glAccum(GL_LOAD,value);
+
+	for (int i=-1;i<=1;i++)
+		for (int j=-1;j<=1;j++){
+			if (i==j==0) continue;
+			for(int x=0;x<WIDTH1;x++)
+				for (int y=0;y<HEIGHT1;y++){
+					int curPos=(y+j)*WIDTH1+(x+i);
+					cout<<"curPos = "<<curPos<<endl;
+					if (curPos>=0 && curPos<WIDTH1*HEIGHT1){
+
+						buffer.buffer[y*WIDTH1+x].R=pixels.buffer[curPos].R;
+						buffer.buffer[y*WIDTH1+x].G=pixels.buffer[curPos].G;
+						buffer.buffer[y*WIDTH1+x].B=pixels.buffer[curPos].B;
+						buffer.buffer[y*WIDTH1+x].A=pixels.buffer[curPos].A;
+					}
+					else{
+						buffer.buffer[y*WIDTH1+x].R=1;
+						buffer.buffer[y*WIDTH1+x].G=1;
+						buffer.buffer[y*WIDTH1+x].B=1;
+						buffer.buffer[y*WIDTH1+x].A=1;
+					}
+				}
+			glDrawPixels(WIDTH1,HEIGHT1,GL_RGBA,GL_FLOAT,buffer.buffer);
+			glAccum(GL_ACCUM,1.0/9);//((i+j)%2!=0)? (0.7f/6.0f):(0.55f/5.0f));
+		}
+	glAccum(GL_RETURN,1.0f);
+	//glAccum(GL_LOAD,1);
+	glReadPixels(0,0,WIDTH1,HEIGHT1,GL_RGBA,GL_FLOAT,pixels.buffer);
+	buffer.clear();
+}
+
 void putline(){
 	glColor4f(102,0,0,127);
 	glBegin(GL_LINE_LOOP);
@@ -87,17 +144,17 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 		else for(line l : lines) pixels.putline(l);
 	} else if (key == GLFW_KEY_LEFT_SHIFT && action == GLFW_PRESS) {
 		f = false;
-		ii=0;
+		//ii=0;
 		pixels.clear();
 		lines.clear();
-	} else if (key==GLFW_KEY_Q && action==GLFW_PRESS) for (line l:lines) pixels.filling(boundary(),l);
+	} else if (key==GLFW_KEY_Q && action==GLFW_PRESS) filling(lines);
 	else if(key == GLFW_KEY_ENTER && action == GLFW_PRESS) {
 		f = false;
 		lines.clear();
 		vertexes.clear();
 		pixels.clear();
 	} else if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-		for(line l : lines) pixels.antialise(l);
+		antialiasing();
 	}
 }
 
@@ -110,27 +167,24 @@ void display(GLFWwindow *window) {
 		glBegin(en);
 			for(vertex v : vertexes)
 				glVertex2f(v.x, v.y);
-		glEnd();/*
-		makelines();
-		for (line l:lines) pixels.putline(l);
-		lines.clear();*/
+		glEnd();
 
-	} else {
-		glDrawPixels(WIDTH1,HEIGHT1,GL_RGBA,GL_BYTE,pixels.buffer);
-	}
+	} else glDrawPixels(WIDTH1,HEIGHT1,GL_RGBA,GL_BYTE,pixels.buffer);
 }
 
 void mouseKey(GLFWwindow *window, int button, int action, int mode) {
-	if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS ) {
-		double x,y;
-		glfwGetCursorPos(window, &x, &y);/*
-		cout<<" "<<x<<"  "<<y<<"\n";
-		cout<<" "<<rx(x)<<"  "<<ry(y)<<"\n";
-		cout<<" "<<tx(rx(x))<<"  "<<ty(ry(y))<<"\n\n";*/
-		if(!f)vertexes.push_back(vertex(rx(x),ry(y)));
-		//else for (line l:lines) pixels.filling(boundary(),l);
-		else {/*pixels.clear();*/pixels.filling(boundary(),lines[ii]);}
-		if (ii<lines.size()-1) ++ii; else ii=0;
+	int i=0;
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+		double x, y;
+		glfwGetCursorPos(window, &x, &y);
+		if (!f) {
+			vertexes.push_back(vertex((x - WIDTH1 / 2) / (WIDTH1 / 2), (HEIGHT1 / 2 - y) / (HEIGHT1 / 2)));
+			//vertexes.push_back(vertex(y*WIDTH1+x));pixels.putpoint(x,y);}//vertex(rx(x), ry(y)));
+			cout << "vertex.x= " << (x - WIDTH1 / 2) / (WIDTH1 / 2) << "  vertex,y= " <<(HEIGHT1 / 2 - y) / (HEIGHT1 / 2) << endl;
+			cout << "tx(rx(x))= " << tx(rx(x)) << "  ty(ry(y))= " <<ty(ry(y))<< endl;
+			cout << "x= " << x << "  y= " << y << endl;
+		}
+		else filling(lines);//antialiasing();
 	}
 }
 
