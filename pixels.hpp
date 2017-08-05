@@ -19,11 +19,9 @@ public:
     void make(int w, int h);
     void clear();
     void putline(line l);
-    void filling(int boundary,line l);
+    void filling(int boundary,line l,bool extremum);
     void putpoint(int x, int y);
     int sign(int x);
-    void rasterize(vertex v);
-    void antialise(line l);
     bool isBlack(int x, int y);
     bool isRed(int x, int y);
     void colour(int x, int y, GLbyte R, GLbyte G, GLbyte B, GLbyte A);
