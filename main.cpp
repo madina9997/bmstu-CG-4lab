@@ -13,6 +13,10 @@
 #include <cstdlib>
 using namespace std;
 
+#define 	GLFW_ACCUM_RED_BITS   0x00021007
+#define 	GLFW_ACCUM_GREEN_BITS   0x00021008
+#define 	GLFW_ACCUM_BLUE_BITS   0x00021009
+#define 	GLFW_ACCUM_ALPHA_BITS   0x0002100A
 //-lglfw3 -lGL  -lGLU  -lm -lXrandr -lXi -lX11 -lXxf86vm -lpthread
 
 //g++ -o lab4 vertex.cpp RGBA.cpp line.cpp pixels.cpp main.cpp -lGLU -lm -lGL -lglfw -lGLEW
@@ -86,8 +90,8 @@ void filling(vector<line>& lines){
 
 void antialiasing() {
 	float value=1.0f/6.0f;
-	glReadBuffer(GL_BACK);
-	glDrawBuffer(GL_BACK);
+	//glReadBuffer(GL_BACK);
+	//glDrawBuffer(GL_BACK);
 
 	glDrawPixels(WIDTH1,HEIGHT1,GL_RGBA,GL_FLOAT,pixels.buffer);
 	glAccum(GL_LOAD,value);
